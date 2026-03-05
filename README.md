@@ -5,12 +5,45 @@
 [![users](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fcdn.jsdelivr.net%2Fgh%2Fmksglu%2Fclaude-context-mode%40main%2Fstats.json&query=%24.message&label=users&color=brightgreen)](https://www.npmjs.com/package/context-mode) [![npm](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fcdn.jsdelivr.net%2Fgh%2Fmksglu%2Fclaude-context-mode%40main%2Fstats.json&query=%24.npm&label=npm&color=blue)](https://www.npmjs.com/package/context-mode) [![marketplace](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fcdn.jsdelivr.net%2Fgh%2Fmksglu%2Fclaude-context-mode%40main%2Fstats.json&query=%24.marketplace&label=marketplace&color=blue)](https://github.com/mksglu/claude-context-mode) [![GitHub stars](https://img.shields.io/github/stars/mksglu/claude-context-mode?style=flat&color=yellow)](https://github.com/mksglu/claude-context-mode/stargazers) [![GitHub forks](https://img.shields.io/github/forks/mksglu/claude-context-mode?style=flat&color=blue)](https://github.com/mksglu/claude-context-mode/network/members) [![Last commit](https://img.shields.io/github/last-commit/mksglu/claude-context-mode?color=green)](https://github.com/mksglu/claude-context-mode/commits) [![License: ELv2](https://img.shields.io/badge/License-ELv2-blue.svg)](LICENSE)
 [![Discord](https://img.shields.io/discord/1478479412700909750?label=Discord&logo=discord&color=5865f2)](https://discord.gg/DCN9jUgN5v)
 
-Context Mode is an MCP server that solves both halves of the context problem:
+## The Problem
+
+Every MCP tool call dumps raw data into your context window. A Playwright snapshot costs 56 KB. Twenty GitHub issues cost 59 KB. One access log — 45 KB. After 30 minutes, 40% of your context is gone. And when the agent compacts the conversation to free space, it forgets which files it was editing, what tasks are in progress, and what you last asked for.
+
+Context Mode is an MCP server that solves both halves of this problem:
 
 1. **Context Saving** — Sandbox tools keep raw data out of the context window. 315 KB becomes 5.4 KB. 98% reduction.
 2. **Session Continuity** — Every file edit, git operation, task, error, and user decision is tracked in SQLite. When the conversation compacts, context-mode doesn't dump this data back into context — it indexes events into FTS5 and retrieves only what's relevant via BM25 search. The model picks up exactly where you left off. If you don't `--continue`, session data is automatically cleaned up after 7 days.
 
 https://github.com/user-attachments/assets/07013dbf-07c0-4ef1-974a-33ea1207637b
+
+## Platform Compatibility
+
+| Feature | Claude Code | Gemini CLI | VS Code Copilot | OpenCode | Codex CLI |
+|---|:---:|:---:|:---:|:---:|:---:|
+| MCP Server | Yes | Yes | Yes | Yes | Yes |
+| PreToolUse Hook | Yes | Yes | Yes | Yes | -- |
+| PostToolUse Hook | Yes | Yes | Yes | Yes | -- |
+| SessionStart Hook | Yes | Yes | Yes | -- | -- |
+| Can Modify Args | Yes | Yes | Yes | Yes | -- |
+| Can Block Tools | Yes | Yes | Yes | Yes | -- |
+| Slash Commands | Yes | -- | -- | -- | -- |
+| Plugin Marketplace | Yes | -- | -- | -- | -- |
+
+### Routing Enforcement
+
+Hooks intercept tool calls programmatically — they can block dangerous commands and redirect them to the sandbox before execution. Instruction files guide the model via prompt instructions but cannot block anything. **Always enable hooks where supported.**
+
+| Platform | Hooks | Instruction File | With Hooks | Without Hooks |
+|---|:---:|---|:---:|:---:|
+| Claude Code | Yes (auto) | [`CLAUDE.md`](configs/claude-code/CLAUDE.md) | **~98% saved** | ~60% saved |
+| Gemini CLI | Yes | [`GEMINI.md`](configs/gemini-cli/GEMINI.md) | **~98% saved** | ~60% saved |
+| VS Code Copilot | Yes | [`copilot-instructions.md`](configs/vscode-copilot/copilot-instructions.md) | **~98% saved** | ~60% saved |
+| OpenCode | Partial (plugin) | [`AGENTS.md`](configs/opencode/AGENTS.md) | **~95% saved** | ~60% saved |
+| Codex CLI | -- | [`AGENTS.md`](configs/codex/AGENTS.md) | -- | ~60% saved |
+
+Without hooks, one unrouted `curl` or Playwright snapshot can dump 56 KB into context — wiping out an entire session's worth of savings.
+
+See [`docs/platform-support.md`](docs/platform-support.md) for the full capability comparison.
 
 ## Install
 
@@ -334,6 +367,23 @@ After compaction, the model receives:
 
 </details>
 
+## Benchmarks
+
+| Scenario | Raw | Context | Saved |
+|---|---|---|---|
+| Playwright snapshot | 56.2 KB | 299 B | 99% |
+| GitHub Issues (20) | 58.9 KB | 1.1 KB | 98% |
+| Access log (500 requests) | 45.1 KB | 155 B | 100% |
+| Context7 React docs | 5.9 KB | 261 B | 96% |
+| Analytics CSV (500 rows) | 85.5 KB | 222 B | 100% |
+| Git log (153 commits) | 11.6 KB | 107 B | 99% |
+| Test output (30 suites) | 6.0 KB | 337 B | 95% |
+| Repo research (subagent) | 986 KB | 62 KB | 94% |
+
+Over a full session: 315 KB of raw output becomes 5.4 KB. Session time extends from ~30 minutes to ~3 hours.
+
+[Full benchmark data with 21 scenarios →](BENCHMARK.md)
+
 ## Try It
 
 These prompts work out of the box. Run `/context-mode:ctx-stats` after each to see the savings.
@@ -370,23 +420,6 @@ Fetch the React useEffect docs, index them, and find the cleanup pattern
 with code examples. Then run /context-mode:ctx-stats.
 ```
 
-## Benchmarks
-
-| Scenario | Raw | Context | Saved |
-|---|---|---|---|
-| Playwright snapshot | 56.2 KB | 299 B | 99% |
-| GitHub Issues (20) | 58.9 KB | 1.1 KB | 98% |
-| Access log (500 requests) | 45.1 KB | 155 B | 100% |
-| Context7 React docs | 5.9 KB | 261 B | 96% |
-| Analytics CSV (500 rows) | 85.5 KB | 222 B | 100% |
-| Git log (153 commits) | 11.6 KB | 107 B | 99% |
-| Test output (30 suites) | 6.0 KB | 337 B | 95% |
-| Repo research (subagent) | 986 KB | 62 KB | 94% |
-
-Over a full session: 315 KB of raw output becomes 5.4 KB. Session time extends from ~30 minutes to ~3 hours.
-
-[Full benchmark data with 21 scenarios →](BENCHMARK.md)
-
 ## Security
 
 Context Mode enforces the same permission rules you already use — but extends them to the MCP sandbox. If you block `sudo`, it's also blocked inside `execute`, `execute_file`, and `batch_execute`.
@@ -415,35 +448,6 @@ The pattern is `Tool(what to match)` where `*` means "anything".
 Commands chained with `&&`, `;`, or `|` are split — each part is checked separately. `echo hello && sudo rm -rf /tmp` is blocked because the `sudo` part matches the deny rule.
 
 **deny** always wins over **allow**. More specific (project-level) rules override global ones.
-
-## Platform Compatibility
-
-| Feature | Claude Code | Gemini CLI | VS Code Copilot | OpenCode | Codex CLI |
-|---|:---:|:---:|:---:|:---:|:---:|
-| MCP Server | Yes | Yes | Yes | Yes | Yes |
-| PreToolUse Hook | Yes | Yes | Yes | Yes | -- |
-| PostToolUse Hook | Yes | Yes | Yes | Yes | -- |
-| SessionStart Hook | Yes | Yes | Yes | -- | -- |
-| Can Modify Args | Yes | Yes | Yes | Yes | -- |
-| Can Block Tools | Yes | Yes | Yes | Yes | -- |
-| Slash Commands | Yes | -- | -- | -- | -- |
-| Plugin Marketplace | Yes | -- | -- | -- | -- |
-
-### Routing Enforcement
-
-Hooks intercept tool calls programmatically — they can block dangerous commands and redirect them to the sandbox before execution. Instruction files guide the model via prompt instructions but cannot block anything. **Always enable hooks where supported.**
-
-| Platform | Hooks | Instruction File | With Hooks | Without Hooks |
-|---|:---:|---|:---:|:---:|
-| Claude Code | Yes (auto) | [`CLAUDE.md`](configs/claude-code/CLAUDE.md) | **~98% saved** | ~60% saved |
-| Gemini CLI | Yes | [`GEMINI.md`](configs/gemini-cli/GEMINI.md) | **~98% saved** | ~60% saved |
-| VS Code Copilot | Yes | [`copilot-instructions.md`](configs/vscode-copilot/copilot-instructions.md) | **~98% saved** | ~60% saved |
-| OpenCode | Partial (plugin) | [`AGENTS.md`](configs/opencode/AGENTS.md) | **~95% saved** | ~60% saved |
-| Codex CLI | -- | [`AGENTS.md`](configs/codex/AGENTS.md) | -- | ~60% saved |
-
-Without hooks, one unrouted `curl` or Playwright snapshot can dump 56 KB into context — wiping out an entire session's worth of savings.
-
-See [`docs/platform-support.md`](docs/platform-support.md) for the full capability comparison.
 
 ## Contributing
 
