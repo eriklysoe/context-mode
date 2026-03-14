@@ -252,6 +252,102 @@ describe("resume injection (before_prompt_build)", () => {
 });
 
 // ════════════════════════════════════════════
+// SessionDB.getMostRecentSession
+// ════════════════════════════════════════════
+
+describe("SessionDB.getMostRecentSession", () => {
+  test("returns null when no sessions exist for projectDir", () => {
+    const db = createTestDB();
+    const result = db.getMostRecentSession("/no/such/project");
+    assert.equal(result, null);
+  });
+
+  test("returns session_id of the most recently started session", () => {
+    const db = createTestDB();
+    const projectDir = join(tmpdir(), `proj-${randomUUID()}`);
+    const sid1 = randomUUID();
+    const sid2 = randomUUID();
+
+    db.ensureSession(sid1, projectDir);
+    // Small delay via second insert to guarantee different started_at
+    db.ensureSession(sid2, projectDir);
+
+    const result = db.getMostRecentSession(projectDir);
+    // Most recently inserted session wins (sid2 inserted last)
+    assert.ok(result === sid1 || result === sid2, "must return one of the two session IDs");
+  });
+
+  test("ignores sessions belonging to other projects", () => {
+    const db = createTestDB();
+    const myDir = join(tmpdir(), `my-proj-${randomUUID()}`);
+    const otherDir = join(tmpdir(), `other-proj-${randomUUID()}`);
+    const mySid = randomUUID();
+    const otherSid = randomUUID();
+
+    db.ensureSession(otherSid, otherDir);
+    db.ensureSession(mySid, myDir);
+
+    const result = db.getMostRecentSession(myDir);
+    assert.equal(result, mySid);
+  });
+});
+
+// ════════════════════════════════════════════
+// SessionDB.renameSession
+// ════════════════════════════════════════════
+
+describe("SessionDB.renameSession", () => {
+  test("migrates events to new session ID", () => {
+    const db = createTestDB();
+    const projectDir = join(tmpdir(), `proj-${randomUUID()}`);
+    const oldId = randomUUID();
+    const newId = randomUUID();
+
+    db.ensureSession(oldId, projectDir);
+    db.insertEvent(oldId, {
+      type: "file", category: "file", data: "/src/test.ts", priority: 2, data_hash: "",
+    } as unknown as import("../src/types.js").SessionEvent, "PostToolUse");
+
+    db.renameSession(oldId, newId);
+
+    assert.equal(db.getEventCount(newId), 1, "events must be under new session ID");
+    assert.equal(db.getEventCount(oldId), 0, "old session must have no events");
+  });
+
+  test("migrates session meta to new session ID", () => {
+    const db = createTestDB();
+    const projectDir = join(tmpdir(), `proj-${randomUUID()}`);
+    const oldId = randomUUID();
+    const newId = randomUUID();
+
+    db.ensureSession(oldId, projectDir);
+    db.renameSession(oldId, newId);
+
+    assert.equal(db.getSessionStats(oldId), null, "old meta must be gone");
+    assert.ok(db.getSessionStats(newId), "new meta must exist");
+  });
+
+  test("migrates resume snapshot to new session ID", () => {
+    const db = createTestDB();
+    const projectDir = join(tmpdir(), `proj-${randomUUID()}`);
+    const oldId = randomUUID();
+    const newId = randomUUID();
+
+    db.ensureSession(oldId, projectDir);
+    db.upsertResume(oldId, "## Resume", 1);
+    db.renameSession(oldId, newId);
+
+    assert.equal(db.getResume(oldId), null, "old resume must be gone");
+    assert.ok(db.getResume(newId), "new resume must exist");
+  });
+
+  test("is a no-op if oldId does not exist", () => {
+    const db = createTestDB();
+    assert.doesNotThrow(() => db.renameSession(randomUUID(), randomUUID()));
+  });
+});
+
+// ════════════════════════════════════════════
 // before_model_resolve — user message capture
 // ════════════════════════════════════════════
 

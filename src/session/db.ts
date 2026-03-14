@@ -79,6 +79,10 @@ const S = {
   deleteMeta: "deleteMeta",
   deleteResume: "deleteResume",
   getOldSessions: "getOldSessions",
+  getMostRecentSession: "getMostRecentSession",
+  renameSessionMeta: "renameSessionMeta",
+  renameSessionEvents: "renameSessionEvents",
+  renameSessionResume: "renameSessionResume",
 } as const;
 
 // ─────────────────────────────────────────────────────────
@@ -244,6 +248,14 @@ export class SessionDB extends SQLiteBase {
     // ── Cleanup ──
     p(S.getOldSessions,
       `SELECT session_id FROM session_meta WHERE started_at < datetime('now', ? || ' days')`);
+
+    p(S.getMostRecentSession,
+      `SELECT session_id FROM session_meta WHERE project_dir = ?
+       ORDER BY started_at DESC LIMIT 1`);
+
+    p(S.renameSessionMeta,   `UPDATE session_meta   SET session_id = ? WHERE session_id = ?`);
+    p(S.renameSessionEvents, `UPDATE session_events SET session_id = ? WHERE session_id = ?`);
+    p(S.renameSessionResume, `UPDATE session_resume SET session_id = ? WHERE session_id = ?`);
   }
 
   // ═══════════════════════════════════════════
@@ -384,6 +396,28 @@ export class SessionDB extends SQLiteBase {
   // ═══════════════════════════════════════════
   // Lifecycle
   // ═══════════════════════════════════════════
+
+  /**
+   * Get the session_id of the most recently started session for a given projectDir.
+   * Returns null if no sessions exist for that directory.
+   */
+  getMostRecentSession(projectDir: string): string | null {
+    const row = this.stmt(S.getMostRecentSession).get(projectDir) as { session_id: string } | undefined;
+    return row?.session_id ?? null;
+  }
+
+  /**
+   * Rename a session ID in-place across all tables, preserving all events,
+   * metadata, and resume snapshots. Used when OpenClaw re-keys session IDs
+   * on gateway restart so accumulated events survive the re-key.
+   */
+  renameSession(oldId: string, newId: string): void {
+    this.db.transaction(() => {
+      this.stmt(S.renameSessionMeta).run(newId, oldId);
+      this.stmt(S.renameSessionEvents).run(newId, oldId);
+      this.stmt(S.renameSessionResume).run(newId, oldId);
+    })();
+  }
 
   /**
    * Delete all data for a session (events, meta, resume).

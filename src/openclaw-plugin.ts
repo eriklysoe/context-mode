@@ -203,10 +203,11 @@ export default {
 
     // Initialize session synchronously (SessionDB constructor is sync)
     const db = new SessionDB({ dbPath: getDBPath(projectDir) });
-    let sessionId = randomUUID();
+    db.cleanupOldSessions(7);
+    // Resume the most recent session for this project (survives gateway restarts)
+    let sessionId = db.getMostRecentSession(projectDir) ?? randomUUID();
     let resumeInjected = false;
     db.ensureSession(sessionId, projectDir);
-    db.cleanupOldSessions(0);
 
     // Load routing instructions synchronously for prompt injection
     let routingInstructions = "";
@@ -367,7 +368,7 @@ export default {
       "command:new",
       async () => {
         try {
-          db.cleanupOldSessions(0);
+          db.cleanupOldSessions(7);
         } catch {
           // best effort
         }
@@ -385,7 +386,7 @@ export default {
       "command:reset",
       async () => {
         try {
-          db.cleanupOldSessions(0);
+          db.cleanupOldSessions(7);
         } catch {
           // best effort
         }
@@ -400,7 +401,7 @@ export default {
       "command:stop",
       async () => {
         try {
-          db.cleanupOldSessions(0);
+          db.cleanupOldSessions(7);
         } catch {
           // best effort
         }
