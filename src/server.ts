@@ -26,7 +26,8 @@ import {
 import { classifyNonZeroExit } from "./exit-classify.js";
 import { startLifecycleGuard } from "./lifecycle.js";
 import { getWorktreeSuffix } from "./session/db.js";
-const VERSION = "1.0.22";
+const require = createRequire(import.meta.url);
+const VERSION: string = require("../package.json").version;
 
 // Prevent silent server death from unhandled async errors
 process.on("unhandledRejection", (err) => {
