@@ -56,7 +56,7 @@ This gives you the 6 sandbox tools but without automatic routing. The model can 
 </details>
 
 <details>
-<summary><strong>Gemini CLI</strong> <sup>(Beta)</sup></summary>
+<summary><strong>Gemini CLI</strong></summary>
 
 **Step 1 — Install globally:**
 
@@ -118,7 +118,7 @@ Full hook config including PreCompress: [`configs/gemini-cli/settings.json`](con
 </details>
 
 <details>
-<summary><strong>VS Code Copilot</strong> <sup>(Beta)</sup></summary>
+<summary><strong>VS Code Copilot</strong></summary>
 
 **Step 1 — Install globally:**
 
@@ -171,7 +171,7 @@ Full hook config including PreCompact: [`configs/vscode-copilot/hooks.json`](con
 </details>
 
 <details>
-<summary><strong>Cursor</strong> <sup>(Beta)</sup></summary>
+<summary><strong>Cursor</strong></summary>
 
 **Step 1 — Install globally:**
 
@@ -226,7 +226,7 @@ Example MCP registration: [`configs/cursor/mcp.json`](configs/cursor/mcp.json)
 </details>
 
 <details>
-<summary><strong>OpenCode</strong> <sup>(Beta)</sup></summary>
+<summary><strong>OpenCode</strong></summary>
 
 **Step 1 — Install globally:**
 
@@ -266,7 +266,7 @@ This works alongside the plugin as a parallel enforcement layer — the plugin i
 </details>
 
 <details>
-<summary><strong>OpenClaw / Pi Agent</strong> <sup>(Beta)</sup></summary>
+<summary><strong>OpenClaw / Pi Agent</strong></summary>
 
 **Prerequisites:** OpenClaw gateway running ([>2026.1.29](https://github.com/openclaw/openclaw/pull/9761)), Node.js 22+.
 
@@ -297,7 +297,7 @@ Full documentation: [`docs/adapters/openclaw.md`](docs/adapters/openclaw.md)
 </details>
 
 <details>
-<summary><strong>Codex CLI</strong> <sup>(Beta)</sup></summary>
+<summary><strong>Codex CLI</strong></summary>
 
 **Step 1 — Install globally:**
 
@@ -327,7 +327,7 @@ Global `~/.codex/AGENTS.md` applies to all projects. Project-level `./AGENTS.md`
 </details>
 
 <details>
-<summary><strong>Antigravity</strong> <sup>(Beta)</sup></summary>
+<summary><strong>Antigravity</strong></summary>
 
 **Step 1 — Install globally:**
 
@@ -359,7 +359,7 @@ Routing rules: [`configs/antigravity/GEMINI.md`](configs/antigravity/GEMINI.md)
 </details>
 
 <details>
-<summary><strong>Kiro</strong> <sup>(Beta)</sup></summary>
+<summary><strong>Kiro</strong></summary>
 
 **Step 1 — Install globally:**
 
@@ -576,7 +576,7 @@ Detailed event data is also indexed into FTS5 for on-demand retrieval via `searc
 
 ## Platform Compatibility
 
-| Feature | Claude Code | Gemini CLI <sup>(Beta)</sup> | VS Code Copilot <sup>(Beta)</sup> | Cursor <sup>(Beta)</sup> | OpenCode <sup>(Beta)</sup> | OpenClaw <sup>(Beta)</sup> | Codex CLI <sup>(Beta)</sup> | Antigravity <sup>(Beta)</sup> | Kiro <sup>(Beta)</sup> |
+| Feature | Claude Code | Gemini CLI | VS Code Copilot | Cursor | OpenCode | OpenClaw | Codex CLI | Antigravity | Kiro |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
 | MCP Server | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
 | PreToolUse Hook | Yes | Yes | Yes | Yes | Plugin | Plugin | -- | -- | -- |
